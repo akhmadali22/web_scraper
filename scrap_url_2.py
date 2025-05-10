@@ -14,13 +14,13 @@ options.add_argument('--disable-gpu')
 base_url = "https://www.rumah123.com/jual/dki-jakarta/rumah/?sort=posted-desc&page={}"
 data = []
 
-for page in range(1, 151):  # ubah sesuai kebutuhan
+for page in range(6, 221):  # ubah sesuai kebutuhan
 
     try:
         driver = webdriver.Chrome(options=options)
         print(f"🔄 Mengunjungi halaman {page}...")
         driver.get(base_url.format(page))
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, 8).until(
             EC.presence_of_element_located((By.ID, "ui-search-page-id"))
         )
 
@@ -48,5 +48,5 @@ print(f"🎯 Total URL terkumpul: {len(data)}")
 
 # Simpan ke CSV
 df = pd.DataFrame(data)
-df.to_csv("url_rumah123.csv", index=False, encoding="utf-8-sig")
-print("📁 URL listing berhasil disimpan ke 'url_rumah123.csv'")
+df.to_csv("url_rumah123_batch2.csv", index=False, encoding="utf-8-sig")
+print("📁 URL listing berhasil disimpan ke 'url_rumah123_batch2.csv'")
