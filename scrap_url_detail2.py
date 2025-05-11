@@ -6,6 +6,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+from selenium_stealth import stealth
 import time
 
 # Load URL hasil scraping sebelumnya
@@ -19,21 +21,47 @@ options.add_argument('--disable-gpu')
 
 output_file = "data_properti_detail_rumah123.csv"
 
+fail_file = "detail_rumah12_fail.csv"
+
 if not os.path.exists(output_file):
     pd.DataFrame(columns=[
         "URL", "Lokasi", "Harga", "Luas Bangunan", "Luas Tanah",
         "Kamar Tidur", "Kamar Mandi", "Garasi", "Jumlah Lantai"
     ]).to_csv(output_file, index=False, encoding="utf-8-sig")
 
+if not os.path.exists(fail_file):
+    pd.DataFrame(columns=[
+        "URL", "Lokasi", "Harga", "Luas Bangunan", "Luas Tanah",
+        "Kamar Tidur", "Kamar Mandi", "Garasi", "Jumlah Lantai"
+    ]).to_csv(fail_file, index=False, encoding="utf-8-sig")
+
+def create_driver():
+    options = Options()
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-gpu')
+    return webdriver.Chrome(options=options)
+
+
 for index, row in df_urls.iterrows():
     url = row["URL"]
-    print(f"🔎 Mengunjungi: {url}")
+    driver = create_driver()
+    wait = WebDriverWait(driver, 8)
     try:
-        driver = webdriver.Chrome(options=options)
+        stealth(driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
         driver.get(url)
-        WebDriverWait(driver, 20).until(
+        time.sleep(10)
+        print(f"🔎 Mengunjungi: {url}")
+        wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
         )
+        print("🔄 Element body ditemukan...")
         lokasi = "-"
         harga = "-"
         luas_bangunan = "-"
@@ -42,24 +70,32 @@ for index, row in df_urls.iterrows():
         kamar_mandi = "-"
         garasi = "-"
         jumlah_lantai = "-"
-        wait = WebDriverWait(driver, 10)
-        lihat_semua_btn = wait.until(EC.presence_of_element_located((
-            By.CSS_SELECTOR,
-            r"button.text-primary.text-sm.w-full.flex.justify-center.md\:justify-start.py-2.items-center.gap-2.cursor-pointer.mt-4"
-        )))
+        try:
+            print("🔄 Mencari Button...")
+            wait_button = WebDriverWait(driver, 10)
+            lihat_semua_btn = wait_button.until(EC.element_to_be_clickable((
+                By.CSS_SELECTOR,
+                r"button.text-primary.text-sm.w-full.flex.justify-center.md\:justify-start.py-2.items-center.gap-2.cursor-pointer.mt-4"
+            )))
+        except TimeoutException:
+            print("Timeout. Button tidak ditemukan.")
+            driver.save_screenshot("timeout_debug.png")
+            exit()
 
         # Scroll ke tombol dan klik
         driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", lihat_semua_btn)
-        time.sleep(10)  # beri waktu animasi scroll selesai
+        time.sleep(5)
+        print("🔄 Klik Button...")  # beri waktu animasi scroll selesai
         ActionChains(driver).move_to_element(lihat_semua_btn).click().perform()
 
         # Tunggu detail tambahan dimuat (sesuaikan waktu jika perlu)
-        time.sleep(10)
+        time.sleep(5)
+        print("🔄 Tunggu detail dimuat...")
 
         # Ambil semua detail
         details = driver.find_elements(By.CSS_SELECTOR,
             "div.mb-4.flex.items-center.gap-4.text-sm.border-0.border-b.border-solid.border-gray-200.pb-2")
-
+        
         for detail in details:
             key_val = detail.find_elements(By.TAG_NAME, "p")
             if len(key_val) >= 2:
@@ -77,7 +113,7 @@ for index, row in df_urls.iterrows():
                     garasi = val
                 elif key == "Jumlah Lantai":
                     jumlah_lantai = val
-
+        print("🔄 Ambil detail selesai...")
         harga_elem = driver.find_element(
             By.CSS_SELECTOR,
             "span.text-primary.font-bold.whitespace-pre"
@@ -102,13 +138,22 @@ for index, row in df_urls.iterrows():
             "Jumlah Lantai": jumlah_lantai
         }
         pd.DataFrame([row_data]).to_csv(output_file, mode='a', header=False, index=False, encoding="utf-8-sig")
-        print(f"✅ Berhasil ambil dan simpan: {url}")
-        time.sleep(2)  # delay untuk menghindari blok
-        driver.quit()
-
+        print(f"✅ Berhasil ambil dan simpan")
+        
     except Exception as e:
         print(f"⚠️ Gagal ambil data dari {url}: {e}")
+        pd.DataFrame([{
+            "URL": url,
+        }]).to_csv(fail_file, mode='a', header=False, index=False, encoding="utf-8-sig")
         continue
+    try:
+        driver.quit()
+        driver.service.stop()
+        print("🔄 Close Driver...")
+    except Exception as e:
+        print(f"⚠️ Error saat quit driver: {e}")
 
+# driver.quit()
+# driver.service.stop()
 # Simpan hasil detail
 print("📁 Detail listing berhasil disimpan ke 'detail_rumah123.csv'")
