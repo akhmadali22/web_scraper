@@ -57,7 +57,8 @@ for index, row in df_urls.iterrows():
         )
         driver.get(url)
         time.sleep(10)
-        print(f"🔎 Mengunjungi: {url}")
+        date_start = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        print(f"🔎 [{date_start}] Mengunjungi: {url}")
         wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
         )
@@ -138,7 +139,8 @@ for index, row in df_urls.iterrows():
             "Jumlah Lantai": jumlah_lantai
         }
         pd.DataFrame([row_data]).to_csv(output_file, mode='a', header=False, index=False, encoding="utf-8-sig")
-        print(f"✅ Berhasil ambil dan simpan")
+        date_stop = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        print(f"✅ [{date_stop}] Berhasil ambil dan simpan")
         
     except Exception as e:
         print(f"⚠️ Gagal ambil data dari {url}: {e}")
@@ -150,6 +152,7 @@ for index, row in df_urls.iterrows():
         driver.quit()
         driver.service.stop()
         print("🔄 Close Driver...")
+        time.sleep(10)
     except Exception as e:
         print(f"⚠️ Error saat quit driver: {e}")
 
