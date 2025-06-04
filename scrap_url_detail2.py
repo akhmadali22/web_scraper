@@ -11,7 +11,7 @@ from selenium_stealth import stealth
 import time
 
 # Load URL hasil scraping sebelumnya
-df_urls = pd.read_csv("url_rumah123.csv")
+df_urls = pd.read_csv("data_baru.csv")
 
 # Setup Chrome headless
 options = Options()
@@ -19,7 +19,7 @@ options.add_argument('--headless')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-gpu')
 
-output_file = "data_properti_detail_rumah123.csv"
+output_file = "detail_rumah123_new.csv"
 
 fail_file = "detail_rumah12_fail.csv"
 
@@ -81,7 +81,7 @@ for index, row in df_urls.iterrows():
         except TimeoutException:
             print("Timeout. Button tidak ditemukan.")
             driver.save_screenshot("timeout_debug.png")
-            exit()
+            continue
 
         # Scroll ke tombol dan klik
         driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", lihat_semua_btn)
